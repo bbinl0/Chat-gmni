@@ -350,13 +350,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const codeBlocks = [];
         let processedText = text.replace(/```(\w*\n)?([\s\S]*?)```/g, (match, lang, code) => {
             const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
-            // Escape the code content to prevent it from being rendered as HTML
-            const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            codeBlocks.push({ lang, original: code.trim(), escaped: escapedCode.trim() }); // Store original and escaped code
+            // Store the original code content without any changes.
+            codeBlocks.push({ lang, code: code.trim() });
             return placeholder;
         });
 
-        // Step 2: Escape the rest of the text to prevent HTML injection
+        // Step 2: Escape the rest of the text to prevent HTML injection.
         const tempDiv = document.createElement('div');
         tempDiv.textContent = processedText;
         processedText = tempDiv.innerHTML;
@@ -393,12 +392,15 @@ document.addEventListener('DOMContentLoaded', () => {
         processedText = finalLines.join('\n');
         processedText = processedText.replace(/\n/g, '<br>');
         
-        // Step 3: Insert the code blocks back in place, rendering them as <pre>
+        // Step 3: Insert the code blocks back in place, rendering them as <pre>.
         for (let i = 0; i < codeBlocks.length; i++) {
-            const { escaped } = codeBlocks[i];
+            const { code } = codeBlocks[i];
             const placeholder = `__CODEBLOCK_${i}__`;
+            // Create an element to escape the code content
+            const codeElement = document.createElement('code');
+            codeElement.textContent = code;
             const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
-            const codeHtml = `<pre>${copyButton}<code>${escaped}</code></pre>`;
+            const codeHtml = `<pre>${copyButton}${codeElement.outerHTML}</pre>`;
             processedText = processedText.replace(placeholder, codeHtml);
         }
         
