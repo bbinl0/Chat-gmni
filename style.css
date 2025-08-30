@@ -434,3 +434,14 @@ body.dark-mode .clear-input-button {
     height: 26px;
     fill: #ffffff;
 }
+
+/* Custom Code Block Background */
+pre {
+    background-color: #f0f4f7; /* Light greyish-blue */
+    border: 1px solid #d1d9e0;
+}
+
+body.dark-mode pre {
+    background-color: #383c44; /* Darker grey for dark mode */
+    border-color: #555;
+}
