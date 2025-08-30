@@ -342,88 +342,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-function appendFormattedMessage(text, sender) {
-    const messageDiv = document.createElement('div');
-    messageDiv.classList.add('message', `${sender}-message`);
+    function appendFormattedMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', `${sender}-message`);
 
-    // Step 1: Find and replace code blocks with a unique temporary placeholder
-    const codeBlocks = [];
-    let processedText = text.replace(/```(\w*\n)?([\s\S]*?)```/g, (match, lang, code) => {
-        const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
-        // Store the original code content without any changes.
-        codeBlocks.push({ lang, code: code.trim() });
-        return placeholder;
-    });
+        // Step 1: Find and process multi-line code blocks
+        let processedText = text.replace(/```([\s\S]*?)```/g, (match, code) => {
+            // Use a temporary element to safely escape HTML characters
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = code.trim();
+            const escapedCode = tempDiv.innerHTML;
 
-    // Step 2: Escape the rest of the text to prevent HTML injection.
-    const tempDiv = document.createElement('div');
-    tempDiv.textContent = processedText;
-    processedText = tempDiv.innerHTML;
+            // Create the HTML for the code block with a copy button
+            const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
+            return `<pre>${copyButton}<code>${escapedCode}</code></pre>`;
+        });
 
-    // Process other markdown elements on the escaped text
-    processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    processedText = processedText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-    processedText = processedText.replace(/_([^_]+)_/g, '<em>$1</em>');
-    processedText = processedText.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Step 2: Process other markdown elements (inline code, bold, italic)
+        processedText = processedText.replace(/`([^`]+)`/g, '<code>$1</code>');
+        processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        processedText = processedText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+        processedText = processedText.replace(/_([^_]+)_/g, '<em>$1</em>');
 
-    // Process lists
-    const lines = processedText.split('\n');
-    let inList = false;
-    let finalLines = [];
+        // Step 3: Process lists
+        const lines = processedText.split('\n');
+        let inList = false;
+        let finalLines = [];
 
-    lines.forEach(line => {
-        if (line.match(/^\s*(\*|-)\s/)) {
-            if (!inList) {
-                finalLines.push('<ul>');
-                inList = true;
+        lines.forEach(line => {
+            if (line.match(/^\s*(\*|-)\s/)) {
+                if (!inList) {
+                    finalLines.push('<ul>');
+                    inList = true;
+                }
+                finalLines.push(`<li>${line.replace(/^\s*(\*|-)\s/, '').trim()}</li>`);
+            } else {
+                if (inList) {
+                    finalLines.push('</ul>');
+                    inList = false;
+                }
+                finalLines.push(line);
             }
-            finalLines.push(`<li>${line.replace(/^\s*(\*|-)\s/, '').trim()}</li>`);
-        } else {
-            if (inList) {
-                finalLines.push('</ul>');
-                inList = false;
-            }
-            finalLines.push(line);
+        });
+        if (inList) {
+            finalLines.push('</ul>');
         }
-    });
-    if (inList) {
-        finalLines.push('</ul>');
-    }
-    processedText = finalLines.join('\n');
-    processedText = processedText.replace(/\n/g, '<br>');
-    
-    // Step 3: Insert the code blocks back in place
-    for (let i = 0; i < codeBlocks.length; i++) {
-        const { code } = codeBlocks[i];
-        const placeholder = `__CODEBLOCK_${i}__`;
+        processedText = finalLines.join('\n');
         
-        const codeElement = document.createElement('code');
-        codeElement.textContent = code;
-        const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
-        const codeHtml = `<pre>${copyButton}${codeElement.outerHTML}</pre>`;
-        
-        // Use a global regex to replace ALL occurrences of this placeholder
-        const placeholderRegex = new RegExp(placeholder, 'g');
-        processedText = processedText.replace(placeholderRegex, codeHtml);
+        // Step 4: Replace remaining newlines with <br> tags
+        processedText = processedText.replace(/\n/g, '<br>');
+
+        // Final step: Add the formatted content to the message div
+        messageDiv.innerHTML = processedText;
+
+        const messageActions = document.createElement('div');
+        messageActions.classList.add('message-actions');
+
+        const copyMessageButton = document.createElement('button');
+        copyMessageButton.classList.add('message-action-button');
+        copyMessageButton.innerHTML = '<i class="fas fa-copy"></i>';
+        copyMessageButton.title = 'কপি';
+        copyMessageButton.onclick = () => copyMessage(copyMessageButton, text);
+        messageActions.appendChild(copyMessageButton);
+
+        messageDiv.appendChild(messageActions);
+        chatWindow.appendChild(messageDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
     }
-    
-    // Step 4: Add the formatted content and actions
-    messageDiv.innerHTML = processedText;
-
-    const messageActions = document.createElement('div');
-    messageActions.classList.add('message-actions');
-
-    const copyMessageButton = document.createElement('button');
-    copyMessageButton.classList.add('message-action-button');
-    copyMessageButton.innerHTML = '<i class="fas fa-copy"></i>';
-    copyMessageButton.title = 'কপি';
-    copyMessageButton.onclick = () => copyMessage(copyMessageButton, text);
-    messageActions.appendChild(copyMessageButton);
-
-    messageDiv.appendChild(messageActions);
-    chatWindow.appendChild(messageDiv);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
-}
 
 
     function appendTypingAnimation() {
