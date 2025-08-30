@@ -245,6 +245,7 @@ body.dark-mode .model-dropdown-item.selected {
     line-height: 1.6;
     word-wrap: break-word;
     font-size: 0.95em;
+    position: relative; /* For positioning action buttons */
 }
 
 .user-message {
@@ -252,6 +253,9 @@ body.dark-mode .model-dropdown-item.selected {
     color: #fff;
     align-self: flex-end;
     border-bottom-right-radius: 5px;
+    display: flex;
+    flex-direction: column; /* To stack text and buttons */
+    align-items: flex-end; /* Align content to the right */
 }
 
 .bot-message {
@@ -260,6 +264,9 @@ body.dark-mode .model-dropdown-item.selected {
     align-self: flex-start;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     border-bottom-left-radius: 5px;
+    display: flex;
+    flex-direction: column; /* To stack text and buttons */
+    align-items: flex-start; /* Align content to the left */
 }
 
 /* Typing animation */
@@ -324,58 +331,49 @@ pre {
     opacity: 1;
 }
 
-.message-copy-button {
-    background-color: rgba(255, 255, 255, 0.2);
-    border: none;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.8em;
+.message-actions {
+    display: flex;
+    gap: 5px; /* Space between buttons */
     margin-top: 5px;
-    opacity: 0.8;
-    transition: opacity 0.3s;
-    display: block; /* Make it a block element to appear below the message */
-    width: fit-content; /* Adjust width to content */
+    align-self: flex-end; /* Align buttons to the right for user messages */
 }
 
-.message-copy-button:hover {
-    opacity: 1;
-    background-color: rgba(255, 255, 255, 0.3);
+.bot-message .message-actions {
+    align-self: flex-start; /* Align buttons to the left for bot messages */
 }
 
-.edit-message-button {
+.message-action-button {
     background: none;
     border: none;
-    color: white; /* Or a color that fits your theme */
+    color: white;
     cursor: pointer;
     padding: 5px;
     border-radius: 50%;
-    font-size: 1em;
-    margin-left: 5px;
+    font-size: 0.9em; /* Smaller icon size */
     opacity: 0.8;
     transition: opacity 0.3s, background-color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; /* Fixed width for circular button */
+    height: 30px; /* Fixed height for circular button */
 }
 
-.edit-message-button:hover {
+.message-action-button:hover {
     opacity: 1;
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-body.dark-mode .edit-message-button {
+.message-action-button i {
+    font-size: 1em; /* Adjust icon size within the button */
+}
+
+body.dark-mode .message-action-button {
     color: #e0e0e0; /* Light text for dark mode */
 }
 
-body.dark-mode .edit-message-button:hover {
+body.dark-mode .message-action-button:hover {
     background-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-mode .message-copy-button {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-mode .message-copy-button:hover {
-    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .chat-footer {
