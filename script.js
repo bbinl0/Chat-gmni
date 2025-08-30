@@ -346,31 +346,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
 
-        // Step 1: Find and process multi-line code blocks
-        let processedText = text.replace(/```([\s\S]*?)```/g, (match, code) => {
-            // Use a temporary element to safely escape HTML characters
+        // Step 1: Handle multi-line code blocks
+        let htmlContent = text.replace(/```([\s\S]*?)```/g, (match, code) => {
             const tempDiv = document.createElement('div');
             tempDiv.textContent = code.trim();
             const escapedCode = tempDiv.innerHTML;
-
-            // Create the HTML for the code block with a copy button
             const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
             return `<pre>${copyButton}<code>${escapedCode}</code></pre>`;
         });
 
-        // Step 2: Process other markdown elements (inline code, bold, italic)
-        processedText = processedText.replace(/`([^`]+)`/g, '<code>$1</code>');
-        processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        processedText = processedText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-        processedText = processedText.replace(/_([^_]+)_/g, '<em>$1</em>');
+        // Step 2: Handle other Markdown formats (bold, italic, inline code)
+        htmlContent = htmlContent.replace(/`([^`]+)`/g, (match, inlineCode) => {
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = inlineCode;
+            return `<code>${tempDiv.innerHTML}</code>`;
+        });
+        htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        htmlContent = htmlContent.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+        htmlContent = htmlContent.replace(/_([^_]+)_/g, '<em>$1</em>');
 
-        // Step 3: Process lists
-        const lines = processedText.split('\n');
+        // Step 3: Handle lists
+        const lines = htmlContent.split('\n');
         let inList = false;
         let finalLines = [];
-
-        lines.forEach(line => {
-            if (line.match(/^\s*(\*|-)\s/)) {
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const isListItem = line.match(/^\s*(\*|-)\s/);
+            if (isListItem) {
                 if (!inList) {
                     finalLines.push('<ul>');
                     inList = true;
@@ -383,18 +385,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 finalLines.push(line);
             }
-        });
+        }
         if (inList) {
             finalLines.push('</ul>');
         }
-        processedText = finalLines.join('\n');
-        
+        htmlContent = finalLines.join('\n');
+        htmlContent = htmlContent.replace(/<\/ul>\n<ul>/g, '</ul><ul>'); // Merge consecutive lists
+
         // Step 4: Replace remaining newlines with <br> tags
-        processedText = processedText.replace(/\n/g, '<br>');
-
-        // Final step: Add the formatted content to the message div
-        messageDiv.innerHTML = processedText;
-
+        htmlContent = htmlContent.replace(/\n\s*\n/g, '<br><br>');
+        htmlContent = htmlContent.replace(/\n/g, '<br>');
+        
+        messageDiv.innerHTML = htmlContent;
         const messageActions = document.createElement('div');
         messageActions.classList.add('message-actions');
 
@@ -420,7 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return typingDiv;
     }
 
-    // Function to copy the entire message content
     window.copyMessage = function(button, textToCopy) {
         navigator.clipboard.writeText(textToCopy).then(() => {
             button.textContent = 'কপি হয়েছে!';
@@ -432,7 +433,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // This function is fine as is
     window.copyCode = function(button) {
         const codeElement = button.nextElementSibling;
         const codeToCopy = codeElement.textContent;
