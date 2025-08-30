@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
             // Escape the code content to prevent it from being rendered as HTML
             const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            codeBlocks.push({ lang, code: escapedCode.trim() });
+            codeBlocks.push({ lang, original: code.trim(), escaped: escapedCode.trim() }); // Store original and escaped code
             return placeholder;
         });
 
@@ -395,10 +395,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Step 3: Insert the code blocks back in place, rendering them as <pre>
         for (let i = 0; i < codeBlocks.length; i++) {
-            const { code } = codeBlocks[i];
+            const { escaped } = codeBlocks[i];
             const placeholder = `__CODEBLOCK_${i}__`;
             const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
-            const codeHtml = `<pre>${copyButton}<code>${code}</code></pre>`;
+            const codeHtml = `<pre>${copyButton}<code>${escaped}</code></pre>`;
             processedText = processedText.replace(placeholder, codeHtml);
         }
         
