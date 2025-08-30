@@ -346,7 +346,7 @@ function appendFormattedMessage(text, sender) {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', `${sender}-message`);
 
-    // Step 1: Find and replace code blocks with a unique temporary placeholder
+    // Step 1: Find and replace code blocks with placeholders
     const codeBlocks = [];
     let processedText = text.replace(/```(\w*\n)?([\s\S]*?)```/g, (match, lang, code) => {
         const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
@@ -366,7 +366,7 @@ function appendFormattedMessage(text, sender) {
     processedText = processedText.replace(/_([^_]+)_/g, '<em>$1</em>');
     processedText = processedText.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-    // Process lists
+    // Process lists (basic markdown list items)
     const lines = processedText.split('\n');
     let inList = false;
     let finalLines = [];
@@ -392,22 +392,24 @@ function appendFormattedMessage(text, sender) {
     processedText = finalLines.join('\n');
     processedText = processedText.replace(/\n/g, '<br>');
     
-    // Step 3: Insert the code blocks back in place
+    // Step 3: Insert the code blocks back in place, rendering them as <pre>.
     for (let i = 0; i < codeBlocks.length; i++) {
         const { code } = codeBlocks[i];
         const placeholder = `__CODEBLOCK_${i}__`;
         
+        // Use a global regex to replace ALL occurrences of this placeholder
+        const placeholderRegex = new RegExp(placeholder, 'g');
+        
+        // Create an element to escape the code content
         const codeElement = document.createElement('code');
         codeElement.textContent = code;
         const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
         const codeHtml = `<pre>${copyButton}${codeElement.outerHTML}</pre>`;
         
-        // Use a global regex to replace ALL occurrences of this placeholder
-        const placeholderRegex = new RegExp(placeholder, 'g');
         processedText = processedText.replace(placeholderRegex, codeHtml);
     }
     
-    // Step 4: Add the formatted content and actions
+    // Step 4: Add the formatted content and actions to the message div
     messageDiv.innerHTML = processedText;
 
     const messageActions = document.createElement('div');
