@@ -1,0 +1,271 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const themeToggle = document.getElementById('theme-toggle');
+    const modelDisplay = document.getElementById('model-display');
+    const selectedModelName = document.getElementById('selected-model-name');
+    const modelDropdown = document.getElementById('model-dropdown');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const clearInputButton = document.getElementById('clear-input-button');
+    const chatWindow = document.getElementById('chat-window');
+    let chatHistory = [];
+    let currentSelectedModelId = 'gemini-2.5-pro'; // Default model
+
+    // Theme Toggle Functionality
+    function applyTheme(isDarkMode) {
+        document.body.classList.toggle('dark-mode', isDarkMode);
+        // Update the icon based on the theme
+        const icon = themeToggle.querySelector('i');
+        if (isDarkMode) {
+            icon.classList.remove('fa-sun');
+            icon.classList.add('fa-moon');
+        } else {
+            icon.classList.remove('fa-moon');
+            icon.classList.add('fa-sun');
+        }
+    }
+
+    // Initialize theme from localStorage or default to light
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        applyTheme(true);
+    } else {
+        applyTheme(false);
+    }
+
+    themeToggle.addEventListener('click', () => {
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        applyTheme(!isDarkMode);
+        localStorage.setItem('theme', !isDarkMode ? 'dark' : 'light');
+    });
+
+    // Function to fetch available models from the API and populate the dropdown
+    async function fetchModels() {
+        try {
+            const response = await fetch('/models');
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+            const models = await response.json();
+
+            modelDropdown.innerHTML = ''; // Clear existing items
+            const categories = {};
+
+            for (const modelId in models) {
+                const model = models[modelId];
+                if (!categories[model.category]) {
+                    categories[model.category] = [];
+                }
+                categories[model.category].push({ id: modelId, ...model });
+            }
+
+            // Define the preferred models
+            const preferredModels = [
+                { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', speed: 'Faster', category: 'Preferred' },
+                { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', speed: 'Fastest', category: 'Preferred' },
+                { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', speed: 'Fast', category: 'Preferred' }
+            ];
+
+            // Add preferred models to the top
+            preferredModels.forEach(model => {
+                const item = document.createElement('div');
+                item.classList.add('model-dropdown-item');
+                item.dataset.modelId = model.id;
+                item.textContent = `${model.name} (${model.speed})`;
+                modelDropdown.appendChild(item);
+            });
+
+            // Add other models, excluding those already added
+            for (const category in categories) {
+                categories[category].forEach(model => {
+                    if (!preferredModels.some(pm => pm.id === model.id)) {
+                        const item = document.createElement('div');
+                        item.classList.add('model-dropdown-item');
+                        item.dataset.modelId = model.id;
+                        item.textContent = `${model.name} (${model.speed})`;
+                        modelDropdown.appendChild(item);
+                    }
+                });
+            }
+
+            // Set initial selected model display
+            if (preferredModels.length > 0) {
+                currentSelectedModelId = preferredModels[0].id;
+                selectedModelName.textContent = preferredModels[0].name;
+                // Mark the initial selected item
+                const initialSelectedItem = modelDropdown.querySelector(`[data-model-id="${currentSelectedModelId}"]`);
+                if (initialSelectedItem) {
+                    initialSelectedItem.classList.add('selected');
+                }
+            }
+
+            // Add event listeners to dropdown items
+            modelDropdown.querySelectorAll('.model-dropdown-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    // Remove 'selected' class from previously selected item
+                    const previouslySelectedItem = modelDropdown.querySelector('.model-dropdown-item.selected');
+                    if (previouslySelectedItem) {
+                        previouslySelectedItem.classList.remove('selected');
+                    }
+
+                    currentSelectedModelId = item.dataset.modelId;
+                    selectedModelName.textContent = item.textContent.split(' (')[0]; // Display only name
+                    item.classList.add('selected'); // Mark new selected item
+                    modelDropdown.classList.remove('show'); // Hide dropdown
+                });
+            });
+
+        } catch (error) {
+            console.error('Error fetching models:', error);
+            selectedModelName.textContent = 'Error loading models';
+        }
+    }
+
+    fetchModels();
+
+    // Toggle model dropdown visibility
+    modelDisplay.addEventListener('click', () => {
+        modelDropdown.classList.toggle('show');
+        const dropdownIcon = modelDisplay.querySelector('.dropdown-icon');
+        if (modelDropdown.classList.contains('show')) {
+            dropdownIcon.style.transform = 'rotate(180deg)';
+        } else {
+            dropdownIcon.style.transform = 'rotate(0deg)';
+        }
+    });
+
+    // Close dropdown if clicked outside
+    document.addEventListener('click', (event) => {
+        const modelSelectionDiv = document.querySelector('.model-selection'); // Get the parent div
+        if (modelSelectionDiv && !modelSelectionDiv.contains(event.target) && modelDropdown.classList.contains('show')) {
+            modelDropdown.classList.remove('show');
+            modelDisplay.querySelector('.dropdown-icon').style.transform = 'rotate(0deg)';
+        }
+    });
+
+    // Handle sending message
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    // Handle clear input button
+    clearInputButton.addEventListener('click', () => {
+        messageInput.value = '';
+    });
+
+    async function sendMessage() {
+        const userMessage = messageInput.value.trim();
+        if (userMessage === '') return;
+
+        appendMessage(userMessage, 'user');
+        messageInput.value = '';
+
+        const selectedModel = currentSelectedModelId;
+        const apiUrl = `/generate/${selectedModel}`;
+
+        const typingMessage = appendTypingAnimation();
+        
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    prompt: userMessage,
+                    history: chatHistory,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+            const data = await response.json();
+
+            typingMessage.remove();
+
+            appendFormattedMessage(data.output, 'bot');
+            chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+            chatHistory.push({ role: 'model', parts: [{ text: data.output }] });
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            typingMessage.remove();
+            appendMessage('দুঃখিত, কোনো ত্রুটি হয়েছে।', 'bot');
+        }
+    }
+
+    function appendMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', `${sender}-message`);
+        messageDiv.textContent = text;
+        chatWindow.appendChild(messageDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return messageDiv;
+    }
+
+    function appendTypingAnimation() {
+        const typingDiv = document.createElement('div');
+        typingDiv.classList.add('message', 'bot-message', 'typing-dots');
+        typingDiv.innerHTML = '<span></span><span></span><span></span>';
+        chatWindow.appendChild(typingDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return typingDiv;
+    }
+
+    function appendFormattedMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', `${sender}-message`);
+
+        // The key is to handle different types of content sequentially
+        let htmlContent = text;
+
+        // 1. Process multi-line code blocks
+        htmlContent = htmlContent.replace(/```([\s\S]*?)```/g, (match, code) => {
+            // Escape HTML characters to prevent injection
+            const escapedCode = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
+            return `<pre style="background-color: white; padding-top: 40px;">${copyButton}<div class="code-content"><code>${escapedCode.trim()}</code></div></pre>`;
+        });
+
+        // 2. Process inline code (before other formatting to avoid conflicts)
+        htmlContent = htmlContent.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        // 3. Process bold text
+        htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // 4. Process italic text
+        htmlContent = htmlContent.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+        htmlContent = htmlContent.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+        // 5. Process lists (this requires a bit of state or more complex regex)
+        // A simpler but effective way is to replace newlines with <br> and then handle lists with CSS.
+        // Or, for a better solution, you can use a library. Let's simplify this part for now.
+        // A simple approach is to replace markdown lists with HTML list tags.
+        htmlContent = htmlContent.replace(/^\s*\*\s(.+)/gm, '<li>$1</li>');
+        htmlContent = `<ul>${htmlContent}</ul>`;
+        htmlContent = htmlContent.replace(/<\/ul><ul>/g, ''); // Merge consecutive lists
+
+        // 6. Replace single newlines with <br> tags
+        htmlContent = htmlContent.replace(/\n/g, '<br>');
+
+        messageDiv.innerHTML = htmlContent;
+        chatWindow.appendChild(messageDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // This function is fine as is
+    window.copyCode = function(button) {
+        const codeElement = button.nextElementSibling;
+        const codeToCopy = codeElement.textContent;
+        navigator.clipboard.writeText(codeToCopy).then(() => {
+            button.textContent = 'কপি হয়েছে!';
+            setTimeout(() => {
+                button.textContent = 'কপি';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    }
+});
