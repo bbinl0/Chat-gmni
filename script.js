@@ -355,36 +355,76 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
 
-        // The key is to handle different types of content sequentially
-        let htmlContent = text;
+        let processedText = text;
 
-        // 1. Process multi-line code blocks
-        htmlContent = htmlContent.replace(/```([\s\S]*?)```/g, (match, code) => {
-            // Escape HTML characters to prevent injection
-            const escapedCode = code.replace(/</g, '<').replace(/>/g, '>');
+        // First, escape all HTML characters in the raw text to prevent any unintended rendering
+        // This ensures that any < or > in the original text are displayed as < or >
+        processedText = processedText.replace(/&/g, '&')
+                                     .replace(/</g, '<')
+                                     .replace(/>/g, '>')
+                                     .replace(/"/g, '"')
+                                     .replace(/'/g, '&#039;');
+
+        // Process multi-line code blocks (```...```)
+        // The content inside `code` is already HTML-escaped from the previous step.
+        // We need to un-escape the backticks and the language hint if present.
+        processedText = processedText.replace(/```(\w*\n)?([\s\S]*?)```/g, (match, lang, code) => {
             const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
-            return `<pre style="background-color: white; padding-top: 40px;">${copyButton}<div class="code-content"><code>${escapedCode.trim()}</code></div></pre>`;
+            // The `code` variable here already contains HTML-escaped content.
+            // We just need to wrap it in <pre><code>.
+            return `<pre style="background-color: white; padding-top: 40px;">${copyButton}<div class="code-content"><code>${code.trim()}</code></div></pre>`;
         });
 
-        // 2. Process inline code (before other formatting to avoid conflicts)
-        htmlContent = htmlContent.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Process inline code (`...`)
+        // This needs to be done carefully to ensure it doesn't interfere with already processed code blocks
+        // And also to ensure the backticks themselves are not escaped.
+        // The content inside `code` is already HTML-escaped.
+        processedText = processedText.replace(/`([^`]+)`/g, (match, inlineCode) => {
+            // The inlineCode is already HTML-escaped.
+            return `<code>${inlineCode}</code>`;
+        });
 
-        // 3. Process bold text
-        htmlContent = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Process bold text (**)
+        processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-        // 4. Process italic text
-        htmlContent = htmlContent.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-        htmlContent = htmlContent.replace(/_([^_]+)_/g, '<em>$1</em>');
+        // Process italic text (*) or (_)
+        processedText = processedText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+        processedText = processedText.replace(/_([^_]+)_/g, '<em>$1</em>');
 
-        // 5. Process lists (this requires a bit of state or more complex regex)
-        htmlContent = htmlContent.replace(/^\s*\*\s(.+)/gm, '<li>$1</li>');
-        htmlContent = `<ul>${htmlContent}</ul>`;
-        htmlContent = htmlContent.replace(/<\/ul><ul>/g, ''); // Merge consecutive lists
+        // Process lists (simple markdown list items)
+        // This is a very basic list processor. For more complex lists, a dedicated markdown parser would be better.
+        // This will convert lines starting with * or - into list items.
+        // It will also wrap consecutive list items in <ul> tags.
+        const lines = processedText.split('\n');
+        let inList = false;
+        let finalLines = [];
 
-        // 6. Replace single newlines with <br> tags
-        htmlContent = htmlContent.replace(/\n/g, '<br>');
+        lines.forEach(line => {
+            if (line.match(/^\s*(\*|-)\s/)) { // Simple bullet points
+                if (!inList) {
+                    finalLines.push('<ul>');
+                    inList = true;
+                }
+                finalLines.push(`<li>${line.replace(/^\s*(\*|-)\s/, '').trim()}</li>`);
+            } else {
+                if (inList) {
+                    finalLines.push('</ul>');
+                    inList = false;
+                }
+                finalLines.push(line);
+            }
+        });
+        if (inList) {
+            finalLines.push('</ul>');
+        }
+        processedText = finalLines.join('\n');
 
-        messageDiv.innerHTML = htmlContent;
+
+        // Replace remaining newlines with <br> tags for regular text
+        // This should be done after all other block-level processing
+        processedText = processedText.replace(/\n/g, '<br>');
+
+        messageDiv.innerHTML = processedText;
 
         const messageActions = document.createElement('div');
         messageActions.classList.add('message-actions');
@@ -394,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
         copyMessageButton.classList.add('message-action-button');
         copyMessageButton.innerHTML = '<i class="fas fa-copy"></i>';
         copyMessageButton.title = 'কপি';
-        copyMessageButton.onclick = () => copyMessage(copyMessageButton, text);
+        copyMessageButton.onclick = () => copyMessage(copyMessageButton, text); // Copy original raw text
         messageActions.appendChild(copyMessageButton);
 
         messageDiv.appendChild(messageActions);
