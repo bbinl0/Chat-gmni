@@ -1,5 +1,4 @@
 body {
-    font-family: 'Roboto', sans-serif;
     background-color: #ffffff; /* White background */
     margin: 0;
     height: 100vh;
@@ -18,7 +17,7 @@ body {
 .chat-header {
     background: linear-gradient(to right, #4a90e2, #5cacee); /* Blue gradient */
     color: white;
-    padding: 15px;
+    padding: 5px;
     border-bottom: 1px solid #cccccc;
     border-radius: 20px 20px 0 0;
     display: flex;
@@ -86,7 +85,7 @@ body.dark-mode .sparkle-emoji {
 .app-title {
     font-size: 1.1em;
     font-weight: 500;
-    margin-bottom: 5px;
+    margin-bottom: 1px;
     display: flex;
     align-items: center;
     justify-content: center;
