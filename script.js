@@ -200,9 +200,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
         messageDiv.textContent = text;
+
+        // Add copy button for the entire message
+        const copyMessageButton = document.createElement('button');
+        copyMessageButton.classList.add('message-copy-button');
+        copyMessageButton.textContent = 'কপি';
+        copyMessageButton.onclick = () => copyMessage(copyMessageButton, text);
+        messageDiv.appendChild(copyMessageButton);
+
+        // Add edit button for user messages
+        if (sender === 'user') {
+            const editButton = document.createElement('button');
+            editButton.classList.add('icon-button', 'edit-message-button');
+            editButton.innerHTML = '<i class="fas fa-edit"></i>';
+            editButton.onclick = () => editMessage(messageDiv, text);
+            messageDiv.appendChild(editButton);
+        }
+
         chatWindow.appendChild(messageDiv);
         chatWindow.scrollTop = chatWindow.scrollHeight;
         return messageDiv;
+    }
+
+    // Function to edit a message
+    window.editMessage = function(messageElement, originalText) {
+        messageInput.value = originalText;
+        messageInput.focus();
+        // Optionally, mark the message as being edited or remove it temporarily
+        // For now, we'll just populate the input.
+        // A more robust solution would involve storing the messageElement reference
+        // and updating its content on re-send.
     }
 
     function appendTypingAnimation() {
@@ -224,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Process multi-line code blocks
         htmlContent = htmlContent.replace(/```([\s\S]*?)```/g, (match, code) => {
             // Escape HTML characters to prevent injection
-            const escapedCode = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const escapedCode = code.replace(/</g, '<').replace(/>/g, '>');
             const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
             return `<pre style="background-color: white; padding-top: 40px;">${copyButton}<div class="code-content"><code>${escapedCode.trim()}</code></div></pre>`;
         });
@@ -251,8 +278,28 @@ document.addEventListener('DOMContentLoaded', () => {
         htmlContent = htmlContent.replace(/\n/g, '<br>');
 
         messageDiv.innerHTML = htmlContent;
+
+        // Add copy button for the entire message
+        const copyMessageButton = document.createElement('button');
+        copyMessageButton.classList.add('message-copy-button');
+        copyMessageButton.textContent = 'কপি';
+        copyMessageButton.onclick = () => copyMessage(copyMessageButton, text);
+        messageDiv.appendChild(copyMessageButton);
+
         chatWindow.appendChild(messageDiv);
         chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // Function to copy the entire message content
+    window.copyMessage = function(button, textToCopy) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            button.textContent = 'কপি হয়েছে!';
+            setTimeout(() => {
+                button.textContent = 'কপি';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
     }
 
     // This function is fine as is
