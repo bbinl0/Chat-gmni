@@ -199,10 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function appendMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
-        const messageContent = document.createElement('div');
-        messageContent.classList.add('message-content');
-        messageContent.textContent = text;
-        messageDiv.appendChild(messageContent);
+        messageDiv.textContent = text;
 
         const messageActions = document.createElement('div');
         messageActions.classList.add('message-actions');
@@ -237,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.editMessage = function(messageElement, originalText) {
         messageInput.value = originalText;
         messageInput.focus();
-        editingMessageElement = messageElement; // Store reference to the message being edited
+        editingMessageElement = messageElement;
 
         // Optionally, visually indicate that this message is being edited
         messageElement.classList.add('editing');
@@ -252,37 +249,58 @@ document.addEventListener('DOMContentLoaded', () => {
             const messageIndex = Array.from(chatWindow.children).indexOf(editingMessageElement);
             if (messageIndex !== -1) {
                 // Update the displayed message content
-                editingMessageElement.querySelector('.message-content').textContent = userMessage;
-                editingMessageElement.classList.remove('editing'); // Remove editing indicator
+                editingMessageElement.firstChild.nodeValue = userMessage; // Update the text content directly
+
+                // Remove existing message actions and re-add them to ensure they are at the bottom
+                const existingActions = editingMessageElement.querySelector('.message-actions');
+                if (existingActions) {
+                    existingActions.remove();
+                }
+
+                const messageActions = document.createElement('div');
+                messageActions.classList.add('message-actions');
+
+                const copyMessageButton = document.createElement('button');
+                copyMessageButton.classList.add('message-action-button');
+                copyMessageButton.innerHTML = '<i class="fas fa-copy"></i>';
+                copyMessageButton.title = 'কপি';
+                copyMessageButton.onclick = () => copyMessage(copyMessageButton, userMessage);
+                messageActions.appendChild(copyMessageButton);
+
+                const editButton = document.createElement('button');
+                editButton.classList.add('message-action-button', 'edit-message-button');
+                editButton.innerHTML = '<i class="fas fa-edit"></i>';
+                editButton.title = 'এডিট';
+                editButton.onclick = () => editMessage(editingMessageElement, userMessage);
+                messageActions.appendChild(editButton);
+                
+                editingMessageElement.appendChild(messageActions);
+
+                editingMessageElement.classList.remove('editing');
 
                 // Update chat history
-                // Find the corresponding user message in chatHistory and update it
-                // Then, remove all subsequent messages (bot replies and user follow-ups)
                 let historyIndex = -1;
                 let currentMessageCount = 0;
                 for (let i = 0; i < chatHistory.length; i++) {
-                    // Count only actual messages, not typing animations or other elements
+                    if (chatHistory[i].role === 'user' && chatWindow.children[currentMessageCount] === editingMessageElement) {
+                        historyIndex = i;
+                        break;
+                    }
                     if (chatWindow.children[currentMessageCount] && chatWindow.children[currentMessageCount].classList.contains('message')) {
-                        if (chatWindow.children[currentMessageCount] === editingMessageElement) {
-                            historyIndex = i;
-                            break;
-                        }
                         currentMessageCount++;
                     }
                 }
 
                 if (historyIndex !== -1) {
                     chatHistory[historyIndex].parts[0].text = userMessage;
-                    // Remove subsequent history entries
                     chatHistory.splice(historyIndex + 1);
                 }
 
-                // Remove all messages in the DOM after the edited message
                 while (editingMessageElement.nextElementSibling) {
-                    editingMessageElement.nextElementSibling.remove();
+                    chatWindow.removeChild(editingMessageElement.nextElementSibling);
                 }
             }
-            editingMessageElement = null; // Reset editing state
+            editingMessageElement = null;
         } else {
             // If sending a new message
             appendMessage(userMessage, 'user');
@@ -359,9 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
         htmlContent = htmlContent.replace(/_([^_]+)_/g, '<em>$1</em>');
 
         // 5. Process lists (this requires a bit of state or more complex regex)
-        // A simpler but effective way is to replace newlines with <br> and then handle lists with CSS.
-        // Or, for a better solution, you can use a library. Let's simplify this part for now.
-        // A simple approach is to replace markdown lists with HTML list tags.
         htmlContent = htmlContent.replace(/^\s*\*\s(.+)/gm, '<li>$1</li>');
         htmlContent = `<ul>${htmlContent}</ul>`;
         htmlContent = htmlContent.replace(/<\/ul><ul>/g, ''); // Merge consecutive lists
@@ -369,10 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 6. Replace single newlines with <br> tags
         htmlContent = htmlContent.replace(/\n/g, '<br>');
 
-        const messageContent = document.createElement('div');
-        messageContent.classList.add('message-content');
-        messageContent.innerHTML = htmlContent;
-        messageDiv.appendChild(messageContent);
+        messageDiv.innerHTML = htmlContent;
 
         const messageActions = document.createElement('div');
         messageActions.classList.add('message-actions');
