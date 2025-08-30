@@ -45,57 +45,6 @@ AVAILABLE_MODELS = {
         "category": "Stable and Recommended"
     },
 
-    # Preview and Best-in-Class (প্রিভিউ, কিন্তু খুবই ভালো)
-    "gemini-2.5-pro-preview-tts": {
-        "name": "Gemini 2.5 Pro TTS",
-        "description": "TTS (Text-to-Speech)-এর জন্য সেরা।",
-        "speed": "Standard",
-        "category": "Preview and Best-in-Class"
-    },
-    "gemini-2.5-flash-preview-tts": {
-        "name": "Gemini 2.5 Flash TTS",
-        "description": "দ্রুত TTS-এর জন্য।",
-        "speed": "Fast",
-        "category": "Preview and Best-in-Class"
-    },
-    "gemini-2.5-flash-image-preview": {
-        "name": "Gemini 2.5 Flash Image Preview",
-        "description": "ইমেজের কাজের জন্য।",
-        "speed": "Fast",
-        "category": "Preview and Best-in-Class"
-    },
-    "gemini-live-2.5-flash-preview": {
-        "name": "Gemini Live 2.5 Flash Preview",
-        "description": "রিয়েল-টাইম ইন্টারেকশনের জন্য।",
-        "speed": "Fast",
-        "category": "Preview and Best-in-Class"
-    },
-    "gemini-2.5-flash-preview-native-audio-dialog": {
-        "name": "Gemini 2.5 Flash Native Audio",
-        "description": "অডিও ভিত্তিক ডায়ালগ বা কথোপকথনের জন্য বিশেষায়িত দ্রুত মডেল।",
-        "speed": "Fast",
-        "category": "Preview and Best-in-Class"
-    },
-
-    # Experimental or Unstable (পরীক্ষামূলক ও অনির্ভরযোগ্য)
-    "gemini-2.5-flash-exp-native-audio-thinking-dialog": {
-        "name": "Gemini 2.5 Flash Audio (Experimental)",
-        "description": "\"Experimental\" বা পরীক্ষামূলক।",
-        "speed": "Fast",
-        "category": "Experimental or Unstable"
-    },
-    "gemini-2.0-flash-preview-image-generation": {
-        "name": "Gemini 2.0 Flash Image Gen",
-        "description": "পুরনো ভার্সন ও পরীক্ষামূলক।",
-        "speed": "Fast",
-        "category": "Experimental or Unstable"
-    },
-    "gemini-2.0-flash-live-001": {
-        "name": "Gemini 2.0 Flash Live",
-        "description": "পুরনো ভার্সন।",
-        "speed": "Fast",
-        "category": "Experimental or Unstable"
-    },
     "gemini-1.5-flash-8b": {
         "name": "Gemini 1.5 Flash 8B",
         "description": "একটি পরীক্ষামূলক ও হালকা ভার্সন।",
