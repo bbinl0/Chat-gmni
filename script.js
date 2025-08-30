@@ -346,20 +346,21 @@ function appendFormattedMessage(text, sender) {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message', `${sender}-message`);
 
-    // Step 1: Find and replace code blocks with placeholders
+    // Step 1: Find and replace code blocks with a unique temporary placeholder
     const codeBlocks = [];
     let processedText = text.replace(/```(\w*\n)?([\s\S]*?)```/g, (match, lang, code) => {
         const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
+        // Store the original code content without any changes.
         codeBlocks.push({ lang, code: code.trim() });
         return placeholder;
     });
 
-    // Step 2: Escape the rest of the text to prevent HTML injection
+    // Step 2: Escape the rest of the text to prevent HTML injection.
     const tempDiv = document.createElement('div');
     tempDiv.textContent = processedText;
     processedText = tempDiv.innerHTML;
 
-    // Process other markdown elements
+    // Process other markdown elements on the escaped text
     processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     processedText = processedText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
     processedText = processedText.replace(/_([^_]+)_/g, '<em>$1</em>');
@@ -396,14 +397,13 @@ function appendFormattedMessage(text, sender) {
         const { code } = codeBlocks[i];
         const placeholder = `__CODEBLOCK_${i}__`;
         
-        // Use a global regex to replace ALL occurrences of this placeholder
-        const placeholderRegex = new RegExp(placeholder, 'g');
-        
         const codeElement = document.createElement('code');
         codeElement.textContent = code;
         const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
         const codeHtml = `<pre>${copyButton}${codeElement.outerHTML}</pre>`;
         
+        // Use a global regex to replace ALL occurrences of this placeholder
+        const placeholderRegex = new RegExp(placeholder, 'g');
         processedText = processedText.replace(placeholderRegex, codeHtml);
     }
     
