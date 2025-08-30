@@ -342,105 +342,79 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function appendTypingAnimation() {
-        const typingDiv = document.createElement('div');
-        typingDiv.classList.add('message', 'bot-message', 'typing-dots');
-        typingDiv.innerHTML = '<span></span><span></span><span></span>';
-        chatWindow.appendChild(typingDiv);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-        return typingDiv;
-    }
-
     function appendFormattedMessage(text, sender) {
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message', `${sender}-message`);
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', `${sender}-message`);
 
-        let processedText = text;
+    // Step 1: Find and replace code blocks with placeholders
+    const codeBlocks = [];
+    let processedText = text.replace(/```(\w*\n)?([\s\S]*?)```/g, (match, lang, code) => {
+        const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
+        codeBlocks.push({ lang, code });
+        return placeholder;
+    });
 
-        // First, escape all HTML characters in the raw text to prevent any unintended rendering
-        // This ensures that any < or > in the original text are displayed as < or >
-        processedText = processedText.replace(/&/g, '&')
-                                     .replace(/</g, '<')
-                                     .replace(/>/g, '>')
-                                     .replace(/"/g, '"')
-                                     .replace(/'/g, '&#039;');
+    // Step 2: Escape the rest of the text
+    const tempDiv = document.createElement('div');
+    tempDiv.textContent = processedText;
+    processedText = tempDiv.innerHTML;
 
-        // Process multi-line code blocks (```...```)
-        // The content inside `code` is already HTML-escaped from the previous step.
-        // We need to un-escape the backticks and the language hint if present.
-        processedText = processedText.replace(/```(\w*\n)?([\s\S]*?)```/g, (match, lang, code) => {
-            const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
-            // The `code` variable here already contains HTML-escaped content.
-            // We just need to wrap it in <pre><code>.
-            return `<pre style="background-color: white; padding-top: 40px;">${copyButton}<div class="code-content"><code>${code.trim()}</code></div></pre>`;
-        });
+    // Process other markdown elements on the escaped text
+    processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    processedText = processedText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+    processedText = processedText.replace(/_([^_]+)_/g, '<em>$1</em>');
+    processedText = processedText.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-        // Process inline code (`...`)
-        // This needs to be done carefully to ensure it doesn't interfere with already processed code blocks
-        // And also to ensure the backticks themselves are not escaped.
-        // The content inside `code` is already HTML-escaped.
-        processedText = processedText.replace(/`([^`]+)`/g, (match, inlineCode) => {
-            // The inlineCode is already HTML-escaped.
-            return `<code>${inlineCode}</code>`;
-        });
+    const lines = processedText.split('\n');
+    let inList = false;
+    let finalLines = [];
 
-        // Process bold text (**)
-        processedText = processedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-        // Process italic text (*) or (_)
-        processedText = processedText.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
-        processedText = processedText.replace(/_([^_]+)_/g, '<em>$1</em>');
-
-        // Process lists (simple markdown list items)
-        // This is a very basic list processor. For more complex lists, a dedicated markdown parser would be better.
-        // This will convert lines starting with * or - into list items.
-        // It will also wrap consecutive list items in <ul> tags.
-        const lines = processedText.split('\n');
-        let inList = false;
-        let finalLines = [];
-
-        lines.forEach(line => {
-            if (line.match(/^\s*(\*|-)\s/)) { // Simple bullet points
-                if (!inList) {
-                    finalLines.push('<ul>');
-                    inList = true;
-                }
-                finalLines.push(`<li>${line.replace(/^\s*(\*|-)\s/, '').trim()}</li>`);
-            } else {
-                if (inList) {
-                    finalLines.push('</ul>');
-                    inList = false;
-                }
-                finalLines.push(line);
+    lines.forEach(line => {
+        if (line.match(/^\s*(\*|-)\s/)) {
+            if (!inList) {
+                finalLines.push('<ul>');
+                inList = true;
             }
-        });
-        if (inList) {
-            finalLines.push('</ul>');
+            finalLines.push(`<li>${line.replace(/^\s*(\*|-)\s/, '').trim()}</li>`);
+        } else {
+            if (inList) {
+                finalLines.push('</ul>');
+                inList = false;
+            }
+            finalLines.push(line);
         }
-        processedText = finalLines.join('\n');
-
-
-        // Replace remaining newlines with <br> tags for regular text
-        // This should be done after all other block-level processing
-        processedText = processedText.replace(/\n/g, '<br>');
-
-        messageDiv.innerHTML = processedText;
-
-        const messageActions = document.createElement('div');
-        messageActions.classList.add('message-actions');
-
-        // Add copy button for the entire message
-        const copyMessageButton = document.createElement('button');
-        copyMessageButton.classList.add('message-action-button');
-        copyMessageButton.innerHTML = '<i class="fas fa-copy"></i>';
-        copyMessageButton.title = 'কপি';
-        copyMessageButton.onclick = () => copyMessage(copyMessageButton, text); // Copy original raw text
-        messageActions.appendChild(copyMessageButton);
-
-        messageDiv.appendChild(messageActions);
-        chatWindow.appendChild(messageDiv);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+    });
+    if (inList) {
+        finalLines.push('</ul>');
     }
+    processedText = finalLines.join('\n');
+    processedText = processedText.replace(/\n/g, '<br>');
+
+    // Step 3: Insert the code blocks back in place
+    for (let i = 0; i < codeBlocks.length; i++) {
+        const { lang, code } = codeBlocks[i];
+        const placeholder = `__CODEBLOCK_${i}__`;
+        const codeHtml = `<pre><button class="copy-button" onclick="copyCode(this)">কপি</button><code>${code.trim()}</code></pre>`;
+        processedText = processedText.replace(placeholder, codeHtml);
+    }
+    
+    // Step 4: Add the formatted content and actions to the message div
+    messageDiv.innerHTML = processedText;
+
+    const messageActions = document.createElement('div');
+    messageActions.classList.add('message-actions');
+
+    const copyMessageButton = document.createElement('button');
+    copyMessageButton.classList.add('message-action-button');
+    copyMessageButton.innerHTML = '<i class="fas fa-copy"></i>';
+    copyMessageButton.title = 'কপি';
+    copyMessageButton.onclick = () => copyMessage(copyMessageButton, text);
+    messageActions.appendChild(copyMessageButton);
+
+    messageDiv.appendChild(messageActions);
+    chatWindow.appendChild(messageDiv);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+}
 
     // Function to copy the entire message content
     window.copyMessage = function(button, textToCopy) {
