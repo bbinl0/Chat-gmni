@@ -199,37 +199,129 @@ document.addEventListener('DOMContentLoaded', () => {
     function appendMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
-        messageDiv.textContent = text;
+        const messageContent = document.createElement('div');
+        messageContent.classList.add('message-content');
+        messageContent.textContent = text;
+        messageDiv.appendChild(messageContent);
+
+        const messageActions = document.createElement('div');
+        messageActions.classList.add('message-actions');
 
         // Add copy button for the entire message
         const copyMessageButton = document.createElement('button');
-        copyMessageButton.classList.add('message-copy-button');
-        copyMessageButton.textContent = 'কপি';
+        copyMessageButton.classList.add('message-action-button');
+        copyMessageButton.innerHTML = '<i class="fas fa-copy"></i>';
+        copyMessageButton.title = 'কপি';
         copyMessageButton.onclick = () => copyMessage(copyMessageButton, text);
-        messageDiv.appendChild(copyMessageButton);
+        messageActions.appendChild(copyMessageButton);
 
         // Add edit button for user messages
         if (sender === 'user') {
             const editButton = document.createElement('button');
-            editButton.classList.add('icon-button', 'edit-message-button');
+            editButton.classList.add('message-action-button', 'edit-message-button');
             editButton.innerHTML = '<i class="fas fa-edit"></i>';
+            editButton.title = 'এডিট';
             editButton.onclick = () => editMessage(messageDiv, text);
-            messageDiv.appendChild(editButton);
+            messageActions.appendChild(editButton);
         }
+        messageDiv.appendChild(messageActions);
 
         chatWindow.appendChild(messageDiv);
         chatWindow.scrollTop = chatWindow.scrollHeight;
         return messageDiv;
     }
 
+    let editingMessageElement = null; // To keep track of the message being edited
+
     // Function to edit a message
     window.editMessage = function(messageElement, originalText) {
         messageInput.value = originalText;
         messageInput.focus();
-        // Optionally, mark the message as being edited or remove it temporarily
-        // For now, we'll just populate the input.
-        // A more robust solution would involve storing the messageElement reference
-        // and updating its content on re-send.
+        editingMessageElement = messageElement; // Store reference to the message being edited
+
+        // Optionally, visually indicate that this message is being edited
+        messageElement.classList.add('editing');
+    }
+
+    async function sendMessage() {
+        const userMessage = messageInput.value.trim();
+        if (userMessage === '') return;
+
+        if (editingMessageElement) {
+            // If editing an existing message
+            const messageIndex = Array.from(chatWindow.children).indexOf(editingMessageElement);
+            if (messageIndex !== -1) {
+                // Update the displayed message content
+                editingMessageElement.querySelector('.message-content').textContent = userMessage;
+                editingMessageElement.classList.remove('editing'); // Remove editing indicator
+
+                // Update chat history
+                // Find the corresponding user message in chatHistory and update it
+                // Then, remove all subsequent messages (bot replies and user follow-ups)
+                let historyIndex = -1;
+                let currentMessageCount = 0;
+                for (let i = 0; i < chatHistory.length; i++) {
+                    // Count only actual messages, not typing animations or other elements
+                    if (chatWindow.children[currentMessageCount] && chatWindow.children[currentMessageCount].classList.contains('message')) {
+                        if (chatWindow.children[currentMessageCount] === editingMessageElement) {
+                            historyIndex = i;
+                            break;
+                        }
+                        currentMessageCount++;
+                    }
+                }
+
+                if (historyIndex !== -1) {
+                    chatHistory[historyIndex].parts[0].text = userMessage;
+                    // Remove subsequent history entries
+                    chatHistory.splice(historyIndex + 1);
+                }
+
+                // Remove all messages in the DOM after the edited message
+                while (editingMessageElement.nextElementSibling) {
+                    editingMessageElement.nextElementSibling.remove();
+                }
+            }
+            editingMessageElement = null; // Reset editing state
+        } else {
+            // If sending a new message
+            appendMessage(userMessage, 'user');
+        }
+
+        messageInput.value = '';
+
+        const selectedModel = currentSelectedModelId;
+        const apiUrl = `/generate/${selectedModel}`;
+
+        const typingMessage = appendTypingAnimation();
+        
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    prompt: userMessage,
+                    history: chatHistory,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+            const data = await response.json();
+
+            typingMessage.remove();
+
+            appendFormattedMessage(data.output, 'bot');
+            chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+            chatHistory.push({ role: 'model', parts: [{ text: data.output }] });
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            typingMessage.remove();
+            appendMessage('দুঃখিত, কোনো ত্রুটি হয়েছে।', 'bot');
+        }
     }
 
     function appendTypingAnimation() {
@@ -277,15 +369,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // 6. Replace single newlines with <br> tags
         htmlContent = htmlContent.replace(/\n/g, '<br>');
 
-        messageDiv.innerHTML = htmlContent;
+        const messageContent = document.createElement('div');
+        messageContent.classList.add('message-content');
+        messageContent.innerHTML = htmlContent;
+        messageDiv.appendChild(messageContent);
+
+        const messageActions = document.createElement('div');
+        messageActions.classList.add('message-actions');
 
         // Add copy button for the entire message
         const copyMessageButton = document.createElement('button');
-        copyMessageButton.classList.add('message-copy-button');
-        copyMessageButton.textContent = 'কপি';
+        copyMessageButton.classList.add('message-action-button');
+        copyMessageButton.innerHTML = '<i class="fas fa-copy"></i>';
+        copyMessageButton.title = 'কপি';
         copyMessageButton.onclick = () => copyMessage(copyMessageButton, text);
-        messageDiv.appendChild(copyMessageButton);
+        messageActions.appendChild(copyMessageButton);
 
+        messageDiv.appendChild(messageActions);
         chatWindow.appendChild(messageDiv);
         chatWindow.scrollTop = chatWindow.scrollHeight;
     }
