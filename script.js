@@ -350,8 +350,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const codeBlocks = [];
         let processedText = text.replace(/```(\w*\n)?([\s\S]*?)```/g, (match, lang, code) => {
             const placeholder = `__CODEBLOCK_${codeBlocks.length}__`;
-            // Store the original code (unescaped)
-            codeBlocks.push({ lang, code: code.trim() });
+            // Escape the code content to prevent it from being rendered as HTML
+            const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            codeBlocks.push({ lang, code: escapedCode.trim() });
             return placeholder;
         });
 
@@ -396,7 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < codeBlocks.length; i++) {
             const { code } = codeBlocks[i];
             const placeholder = `__CODEBLOCK_${i}__`;
-            const codeHtml = `<pre><button class="copy-button" onclick="copyCode(this)">কপি</button><code>${code}</code></pre>`;
+            const copyButton = `<button class="copy-button" onclick="copyCode(this)">কপি</button>`;
+            const codeHtml = `<pre>${copyButton}<code>${code}</code></pre>`;
             processedText = processedText.replace(placeholder, codeHtml);
         }
         
