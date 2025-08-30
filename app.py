@@ -26,12 +26,6 @@ AVAILABLE_MODELS = {
         "speed": "Fastest",
         "category": "Stable and Recommended"
     },
-    "gemini-1.5-pro": {
-        "name": "Gemini 1.5 Pro",
-        "description": "নির্ভরযোগ্য এবং বহুমুখী।",
-        "speed": "Standard",
-        "category": "Stable and Recommended"
-    },
     "gemini-1.5-flash": {
         "name": "Gemini 1.5 Flash",
         "description": "দ্রুত গতির জন্য ভালো।",
